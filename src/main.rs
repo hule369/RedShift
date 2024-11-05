@@ -10,7 +10,7 @@ use systray::Application;
 use std::thread;
 use std::sync::mpsc::{Sender, Receiver, channel};
 use std::env;
-use winapi::um::winuser::{GetSystemMetrics, SM_CXSCREEN, SM_CYSCREEN, SM_CYCAPTION};
+use winapi::um::winuser::{GetSystemMetrics, SM_CXSCREEN, SM_CYSCREEN};
 use winreg::enums::*;
 use winreg::RegKey;
 use std::path::PathBuf;
@@ -162,10 +162,6 @@ impl eframe::App for ControllerApp {
             // Define all positioning variables for opacity control
             let mut opacity = self.config.opacity as f32;
             
-            // Window dimensions
-            let window_width = 270.0;
-            let window_height = 150.0;
-            
             // Slider dimensions
             let slider_width = 220.0;
             let slider_height = 24.0;
@@ -265,16 +261,48 @@ impl eframe::App for ControllerApp {
 
 fn save_config(config: &overlay::OverlayConfig) {
     let config_path = overlay::config_path();
-    let config_str = serde_json::to_string_pretty(config).unwrap();
-    if let Err(e) = std::fs::write(&config_path, config_str) {
-        eprintln!("Failed to save config: {}", e);
+    println!("Saving config to: {}", config_path.display());
+    
+    let config_str = match serde_json::to_string_pretty(config) {
+        Ok(str) => str,
+        Err(e) => {
+            eprintln!("Failed to serialize config: {}", e);
+            return;
+        }
+    };
+
+    if let Some(parent) = config_path.parent() {
+        if let Err(e) = std::fs::create_dir_all(parent) {
+            eprintln!("Failed to create config directory: {}", e);
+            return;
+        }
+    }
+
+    match std::fs::write(&config_path, config_str) {
+        Ok(_) => println!("Successfully saved config"),
+        Err(e) => eprintln!("Failed to save config: {}", e),
     }
 }
 
 fn load_config() -> Option<overlay::OverlayConfig> {
     let config_path = overlay::config_path();
-    let config_str = std::fs::read_to_string(config_path).ok()?;
-    serde_json::from_str(&config_str).ok()
+    println!("Loading config from: {}", config_path.display());
+    
+    let config_str = match std::fs::read_to_string(&config_path) {
+        Ok(str) => str,
+        Err(e) => {
+            eprintln!("Failed to read config file: {}", e);
+            return None;
+        }
+    };
+
+    match serde_json::from_str(&config_str) {
+        Ok(config) => Some(config),
+        Err(e) => {
+            eprintln!("Failed to parse config: {}", e);
+            None
+        }
+    }
 }
 
 enum TrayAction {
@@ -415,22 +443,22 @@ fn run_controller() {
         screen_height = GetSystemMetrics(SM_CYSCREEN);
     }
 
-    let window_width = 270.0;
-    let window_height = 150.0;
+    let _window_width = 270.0;
+    let _window_height = 150.0;
     
     // Calculate position (bottom right, above taskbar)
-    let x = (screen_width as f32) - window_width - right_margin;  // Move left by right_margin
-    let y = (screen_height as f32) - window_height - taskbar_height as f32;  // Raise higher
+    let x = (screen_width as f32) - _window_width - right_margin;  // Move left by right_margin
+    let y = (screen_height as f32) - _window_height - taskbar_height as f32;  // Raise higher
 
     let options = NativeOptions {
-        initial_window_size: Some(egui::vec2(window_width, window_height)),
+        initial_window_size: Some(egui::vec2(_window_width, _window_height)),
         initial_window_pos: Some(egui::pos2(x, y)),
         resizable: false,
         decorated: true,
         transparent: true,
         always_on_top: true,
-        min_window_size: Some(egui::vec2(window_width, window_height)),
-        max_window_size: Some(egui::vec2(window_width, window_height)),
+        min_window_size: Some(egui::vec2(_window_width, _window_height)),
+        max_window_size: Some(egui::vec2(_window_width, _window_height)),
         icon_data: Some(load_icon()),
         ..Default::default()
     };

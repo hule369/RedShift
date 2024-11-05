@@ -3,16 +3,6 @@ name = "RedShift"
 version = "1.0.0"
 edition = "2021"
 
-# Add this line to specify the Windows subsystem
-[package.metadata.windows]
-subsystem = "windows"
-
-# Alternative method - add this if the above doesn't work
-[[bin]]
-name = "RedShift"
-path = "src/main.rs"
-subsystem = "windows"
-
 [dependencies]
 # GUI Framework
 eframe = { version = "0.22.0", default-features = false, features = ["glow"] }
@@ -48,7 +38,4 @@ winreg = "0.50"
 
 [build-dependencies]
 winres = "0.1"
-
-[target.'cfg(windows)'.dependencies]
-windows-subsystem = "windows"
 

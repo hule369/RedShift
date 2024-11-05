@@ -4,6 +4,7 @@ use std::sync::atomic::{AtomicU8, Ordering};
 use std::thread;
 use std::time::Duration;
 use std::fs;
+use std::path::{PathBuf, Path};
 use serde::{Serialize, Deserialize};
 use winit::{
     dpi::{LogicalPosition, LogicalSize},
@@ -49,12 +50,27 @@ fn clamp_opacity(opacity: u8) -> u8 {
     opacity.clamp(90, 200)
 }
 
-pub fn config_path() -> std::path::PathBuf {
-    let mut path = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
-    path.push("config");
-    std::fs::create_dir_all(&path).ok();
-    path.push("config.json");
-    path
+pub fn config_path() -> PathBuf {
+    let path = if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+        PathBuf::from(local_app_data)
+    } else {
+        std::env::current_exe()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .to_path_buf()
+    };
+    
+    let mut config_path = path;
+    config_path.push("RedShift");
+    
+    // Create directory if it doesn't exist
+    if let Err(e) = std::fs::create_dir_all(&config_path) {
+        eprintln!("Failed to create config directory: {}", e);
+    }
+    
+    config_path.push("config.json");
+    config_path
 }
 
 fn watch_opacity_changes() {
